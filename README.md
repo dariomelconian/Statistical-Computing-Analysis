@@ -4,4 +4,3 @@ This repository holds assignments, reports, and any other files from the followi
 
 - SS 4864 - Advanced Statistical Computing
 - SS 4950 - Advanced Data Analysis
-- 
