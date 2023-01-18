@@ -1,0 +1,380 @@
+---
+title: "R Notebook"
+author: "Dario Melconian"
+output:
+  html_document:
+    df_print: paged
+  html_notebook: default
+  pdf_document: default
+---
+
+Question 1:
+
+a).
+```{r}
+DGP = function(k) {
+  
+  set.seed(4864)
+  x = sample(0:15, size = 31, replace = T)
+  
+  set.seed(as.POSIXct(Sys.time()))
+  
+  a = 3
+  b = 0.3
+  
+  e = .95 * rnorm(31,0,1) + 0.05 * rnorm(31, 0,k ^2)
+  e = scale(e)[1]
+  
+  y = a + b * x + e 
+  
+  return(list(x,y))
+}
+```
+
+b).
+```{r}
+lad = function(ab,x,y) {
+  
+  return(min(sum(abs(y - (ab[1] + ab[2] * x)))))
+}
+
+ladEst = function(x,y) {
+  
+  reg = lm(y ~ x)
+  
+  a = reg$coefficients[[1]]
+  b = reg$coefficients[[2]]
+  vectorEst = c(a,b)
+  
+  ret = nlminb(vectorEst, lad, x = x, y = y)
+  return(ret)
+}
+```
+
+c).
+```{r}
+data = DGP(1)
+y = data[[2]]
+x = data[[1]]
+
+ret = ladEst(x = x,y = y)
+
+ret[[1]][1]
+ret[[1]][2]
+
+# use LM 
+lm(y ~ x)
+```
+The estimations are the same amidst the decimal rounding.
+
+d).
+```{r}
+# k = 8 contaminated normal errors
+data = DGP(8)
+
+y = data[[2]]
+x = data[[1]]
+
+ret = ladEst(x = x, y = y)
+
+ret[[1]][1]
+ret[[1]][2]
+
+# LM
+lm(y ~ x)
+```
+Parameter estimations are nearly identical for contaiminated normal errors.
+
+e).
+```{r}
+# i. Write a function with arguments R=1000 as the number of bootstraps
+SDEboot = function(x, y, R = 1000) {
+  estA = c()
+  estB = c()
+  
+  for(val in 1:R) {
+    
+    #ii. In the function body, resample x, y to generate a bootstrap pair sample x∗, y∗
+    xStar = sample(x, replace = T)
+    yStar = sample(y, replace = T)
+    
+    # iii. Run R times to get a vectors of those a, b estimators.
+    vals = ladEst(xStar, yStar)
+    estA = c(estA, vals[[1]][1])
+    estB = c(estB, vals[[1]][2])
+    
+    # iv. Compute the standard errors of a and b respectively.
+    SEA = sd(estA)/sqrt(length(estA))
+    SEB =sd(estB)/sqrt(length(estB))
+    
+    aRet = mean(estA)
+    bRet = mean(estB)
+  }
+  # v. Return those two standard errors as well as the LAD estimators based on the
+  return(list(aRet, bRet, SEA, SEB))
+}
+
+# vi. Test your function with the pairs generated in (c) and (d). Report your findings.
+data = DGP(1)
+y = data[[2]]
+x = data[[1]]
+
+test = SDEboot(x,y)
+test
+current = lm(y ~ x)
+summary(current)
+```
+
+Boot strap SE's are significantly greater then the ones found using OLS.
+
+```{r}
+data = DGP(8)
+y = data[[2]]
+x = data[[1]]
+Sboot = SDEboot(x,y)
+Sboot
+current = lm(y ~ x)
+summary(current)
+```
+The same thing is true for the contaminated normal erors data. The SE is much higher for the bootstrap estimations
+
+f).
+```{r}
+n = 1000 
+result = data.frame(matrix(NA, nrow = n, ncol = 4))
+
+colnames(result) = c("a_est", "b_est", "a_SE", "b_SE")
+ptm = proc.time()
+
+for (val in 1:n) {
+  
+  data = DGP(1)
+  x = data[[1]]
+  y = data[[2]]
+  
+  bootVals = SDEboot(x,y)
+  result$estA[val] = bootVals[[1]]
+  result$estB[val] = bootVals[[2]]
+  result$SEA[val] = bootVals[[3]]
+  result$SEB[val] = bootVals[[4]]
+}
+# compare
+proc.time() - ptm
+
+
+data = DGP(1)
+y = data[[2]]  
+x = data[[1]]
+
+#SE calc
+print("SE for a:")
+sd(result$estA)/sqrt(length(result$estA))
+
+print("SE for b:")
+sd(result$estB)/sqrt(length(result$estB))
+
+print("Mean of SE_a")
+mean(result$SEA)
+
+print("Mean of SE_b")
+mean(result$SEB)
+
+print("SE of SE a")
+sd(result$SEA)/sqrt(length(result$SEA))
+
+print("SE of SE b")
+sd(result$SEB)/sqrt(length(result$SEB))
+
+cur = lm(y ~ x)
+summary(cur)
+
+hist(result$estA)
+hist(result$estB)
+hist(result$SEA)
+hist(result$SEB)
+```
+
+```{r}
+n = 1000 
+result_7 = data.frame(matrix(NA, nrow=n, ncol=4))
+colnames(result_7) = c("a_est", "b_est", "a_SE", "b_SE")
+ptm = proc.time()
+
+for(val in 1:n) {
+  
+  data = DGP(7)
+  x = data[[1]]
+  y = data[[2]]
+  
+  bootVals = SDEboot(x,y)
+  result_7$estA[val] = bootVals[[1]]
+  result_7$estB[val] = bootVals[[2]]
+  result_7$SEA[val] = bootVals[[3]]
+  result_7$SEB[val] = bootVals[[4]]
+}
+proc.time() - ptm
+
+```
+
+
+```{r}
+data = DGP(1)
+y = data[[2]]
+x = data[[1]]
+
+print("SE for a:")
+
+sd(result_7$estA)/sqrt(length(result$estA))
+
+print("SE for b:")
+
+sd(result_7$estB)/sqrt(length(result$estB))
+
+print("Mean of SE_a")
+
+mean(result_7$SEA)
+
+print("Mean of SE_b")
+
+mean(result_7$SEB)
+
+print("SE of SE a")
+
+sd(result_7$SEA)/sqrt(length(result$SEA))
+
+print("SE of SE b")
+
+sd(result_7$SEB)/sqrt(length(result$SEB))
+
+cur = lm(y ~ x)
+summary(cur)
+
+hist(result_7$estA)
+hist(result_7$estB)
+hist(result_7$SEA)
+hist(result_7$SEB)
+```
+Errors are much lower in both as seen earlier on.  But, they are closer then what was found clearly above. 
+
+g).
+```{r}
+library(parallel)
+cl = makeCluster(detectCores())
+
+SDEboot_para = function(data) {
+  estA = c()
+  estB = c()
+  x = data[[1]]
+  y = data[[2]]
+  lad = function(ab, x, y) {
+    return(min(sum(abs(y - (ab[1] + ab[2] * x)))))
+  }
+  for(val in 1:1000) {
+    
+    x_star <- sample(x, replace = T)
+    y_star <- sample(y, replace = T)
+    
+    
+    reg = lm(y ~ x)
+    a = reg$coefficients[[1]]
+    b = reg$coefficients[[2]]
+    vector = c(a,b)
+  
+    vals = nlminb(vector, lad, x = x, y = y)
+    
+    estA = c(estA, vals[[1]][1])
+    estB = c(estB, vals[[1]][2])
+    SEA = sd(estA)/sqrt(length(estA))
+    SEB = sd(estB)/sqrt(length(estB))
+    retA = mean(estA)
+    retB = mean(estB)
+  }
+  return(list(retA, retB, SEA, SEB))
+}
+
+clusterSetRNGStream(cl)
+res = list()
+
+for(i in 1:1000){
+  
+  res[[i]] = DGP(1)
+}
+
+
+```
+
+```{r}
+ptm = proc.time()
+result = parSapply(cl, res, SDEboot_para)
+proc.time() - ptm
+```
+The computation is performew but it just retd much faster, however, it does indeed return the same value repeatedly. 
+
+Question 2:
+```{r}
+statistic.star = function(x, R = 50000) {
+  vals = c()
+  
+  for(val in 0:R) {
+    
+    a = sample(x, replace = T)
+    values = c(values, mean(a))
+  }
+  return(values)
+}
+```
+
+a).
+```{r}
+test.ci = function(x, R = 50000) {
+  statistic.star = function(x, R = 50000) {
+    
+    values = c()
+    for(val in 0:R) {
+      
+      a = sample(x, replace = T)
+      values = c(values, mean(a))
+    }
+    return(values)
+  }
+
+  a = statistic.star(x,R)
+
+  CI1 = c(mean(x) - (1.96*sd(a)), mean(x) + (1.96 * sd(a)))
+  if(CI1[1] < 0.25 && 0.25 < CI1[2]) {
+    
+  }
+ 
+  q = quantile(a, c(0.025, 0.975))
+  
+  CI3 = c(q[[1]], q[[2]])
+  
+  if (CI3[1] < 0.25 && 0.25 < CI3[2]) {
+    
+    break
+  }
+
+  return(list(CI1,CI3))
+}
+```
+
+b).
+```{R}
+# do it for a 1/4 rate
+dataSize15 = rexp(15, rate = 1/4)
+dataSize50 = rexp(50, rate = 1/4)
+```
+
+```{r}
+ptm = proc.time()
+result1 = parSapply(cl, dataSize15, test.ci)
+proc.time() - ptm
+```
+
+```{r}
+ptm = proc.time()
+result2 = parSapply(cl, dataSize50, test.ci)
+proc.time() - ptm
+```
+Therefore, it is easily seen that the larger the sample size, the lower the bias.
+
