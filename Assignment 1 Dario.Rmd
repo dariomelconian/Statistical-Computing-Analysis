@@ -1,0 +1,293 @@
+---
+title: "SS4864 - Assignment 1"
+author: "Dario Melconian"
+date: "21/09/2021"
+output:
+  word_document: default
+  pdf_document: default
+---
+
+Question 1:
+
+a).
+```{r}
+help(read.table)
+```
+
+The main difference between read.csv and read.csv2 is that csv is used for data separated by commas, with periods used as decimals.  In contrast, csv2 involves data separated by semicolons, and commas are in fact used as decimals.
+Read.delim is used when numbers in your file use periods as decimals, and read.delim2 is used for when numbers in your file use commas as decimals. 
+
+b).
+```{r}
+help(write.table)
+```
+
+The main difference between write.csv and write.csv2 is that write.csv uses periods for the decimal points with commas used for the separator.  Whereas write.csv2 uses a comma for the decimal point, and a semicolon for the separator.
+I can match the functions with read as import functions, and write with export functions.  Write will export the file, and read will import it. (Regardless if it is a table type of csv or csv2, etc).
+
+c).
+```{r}
+myFile = read.csv2("bank.csv")
+
+#myFile
+```
+
+```{r}
+dim(myFile)
+
+# or 
+nrow(myFile)
+ncol(myFile)
+
+# find variable names
+names(myFile)
+
+search()
+objects(pos=2, pattern="norm")
+
+sum(is.na(myFile))
+
+```
+Thus, there are 4521 observations.  No missing values. Variable names are listed above.
+
+
+Question 2:
+```{r}
+help(apply)
+help(lapply)
+help(sapply)
+```
+The similarities are that they all have similar function in R, being useful for performing operations on list objects.  The primary use being to avoid wrongly used looping.  
+
+For example, apply(matrix, 2, sum) performs the sum of the columns, as columns = 2 and rows = 1.
+
+Some differences:
+- Lapply deals with taking a list/vector/df object and outputs a list object of same length. 
+- Sapply deals with taking a list/vector/df as input and outputs a vector or matrix.
+- apply deals with taking a matrix/df as input and outputs a vector, list, or array. 
+
+
+Monte Carlo Simulation Implementation
+```{r}
+# set k = 10000
+k = 10000
+
+# set rate = 1 (very skewed)
+# choose n = 10
+hist(replicate(k, mean(rexp(10, rate = 1))))
+
+# choose n = 50
+hist(replicate(k, mean(rexp(50, rate = 1))))
+
+# choose n = 100
+hist(replicate(k, mean(rexp(100, rate = 1))))
+```
+
+
+Question 3:
+```{r}
+help(class)
+```
+
+```{r}
+help(methods)
+```
+
+
+```{r}
+dataObject1 = cars
+
+dataObject2 = sunspots
+
+# plot the 2 datasets
+plot(dataObject1)
+plot(dataObject2)
+
+# determining classes for the 2 datasets
+class(dataObject1)
+class(dataObject2)
+
+# outcomes of summary
+summary(dataObject1)
+summary(dataObject2)
+
+# create new data vector
+x = rnorm(100)
+
+# produce a plot
+plot(x)
+
+# change the class to ts
+class(x) = "ts"
+
+# apply plot again
+plot(x)
+```
+2 plots are produced for plot for each dataset because of the fact that the cars dataset displays a relationship of 2 variables, and the sunspots dataset is a timeseries model so its plot is a timeseries plot.
+
+Summary produces the outcome of summary statistics such as minimums, quantiles, median, mean, etc.
+
+A different plot is produced on the same object because the class of the object was changed from a vector to a ts (time series) model.
+
+
+Question 4:
+
+a).
+```{r}
+#print(myFile$balance)
+myFileQ4 = split(myFile$balance, myFile$y ==  "yes")
+
+# summarize balance for y = "yes" as well as for y = "no"
+summary(myFileQ4[1])
+summary(myFileQ4[2])
+
+# compare their distributions
+Yesbalanced = myFileQ4[[2]]
+Nobalanced = myFileQ4[[1]]
+
+plot(Yesbalanced)
+plot(Nobalanced)
+```
+I think balance can be used to predict y because 
+
+b).
+```{r}
+myFileQ4b = myFile 
+
+# Y ASSOCIATION - check for association between marital and y:
+myFileQ4b$y = factor(myFileQ4b$y, levels = c("no", "yes"))
+
+# MARITAL ASSOCIATION - categorical variables, so easier to convert them into factors first:
+myFileQ4b$marital = factor(myFileQ4b$marital, levels = c("single", "divorced", "married"))
+
+# chisq test to test association
+chisq.test(myFileQ4b$marital, myFileQ4b$y)
+
+# HOUSING ASSOCIATION - now checking the relationship between housing and y:
+myFileQ4b$housing <- factor(myFileQ4b$housing, levels = c("no", "yes"))
+
+# chisq test to test association  
+chisq.test(myFileQ4b$housing, myFileQ4b$y)
+```
+For marital, due to the reason that the p-value is < 0.05, being 7.374e-05, it proves the significance of the claim that there is a relationship, and thus it can be concluded that there is an association. 
+
+For housing, due to the reason that the p-value is < 0.05, being 2.715e-12, it proves the significance of the claim that there is a relationship, and thus it can be concluded that there is an association. 
+
+
+Question 5:
+
+a).
+```{r}
+set.seed(4864) #all will have the same dataset
+N = 10000
+x = sample(seq(0, 20, by = 0.1), size = N, replace = TRUE)
+y = 1 + 0.1 * x + rnorm(N, sd = 1 + 2 * rbinom(N, 1, prob = 0.1))
+
+# put x and y into a dataframe
+dataFrameQ5 = data.frame(x,y)
+
+# plot y against x
+plot(dataFrameQ5)
+```
+
+b).
+```{r}
+# creating training dataset using SRS procedure on raw data from part a).
+# sample of 500 to train the model with
+indexTestData = sample(seq_len(nrow(dataFrameQ5)), size = 500)
+
+# rest of the data save for c), and the train data is the rest
+restData = dataFrameQ5[-indexTestData, ]
+trainData = dataFrameQ5[indexTestData,]
+
+# build 2 regression models
+regressionModel1 = lm(y ~ x, data = trainData)  # y against x
+regressionModel2 = lm(y ~ sqrt(x), data = trainData)  # y against sqrt(x)
+
+# model diagnostics:
+#install.packages("ggfortify") 
+# to visualize many graphs and various data
+library(ggfortify)
+
+autoplot(regressionModel1)
+autoplot(regressionModel2)
+
+# find RMSE (root mean square errors)
+# RMSE is computed as RMSE = mean((observeds - predicteds)^2) %>% sqrt() . The lower the RMSE, the better the model
+# where: data$actual - data$predicted
+yHatRegressionModel1 = predict(regressionModel1, newdata = trainData)
+regressionModel1RSMEpartB = sqrt(mean((yHatRegressionModel1 - trainData$y)^2))
+
+yHatRegressionModel2 = predict(regressionModel2, newdata = trainData)
+regressionModel2RSMEpartB = sqrt(mean((yHatRegressionModel2 - trainData$y)^2))
+```
+
+c).
+```{r}
+# generate testing dataset with size 500 using SRS procedure on raw data generated in a) AFTER EXCLUDING the training dataset
+index = sample(seq_len(nrow(restData)), size = 500)
+# test dataset for 5c
+testDataset5c = restData[index, ]
+
+# validate the models constructed in b):
+
+# find PREDICTED values for each of the 2 models
+yHatRegression1C = predict(regressionModel1, newdata = testDataset5c)
+yHatRegression2C = predict(regressionModel2, newdata = testDataset5c)
+
+# find RESIDUAL values for each of the 2 models
+residualsRegression1C = yHatRegression1C - testDataset5c$y
+residualsRegression2C = yHatRegression2C - testDataset5c$y
+
+# for each model find the RMSE and compare to b).
+regressionRSME1partC = sqrt(mean((residualsRegression1C)^2))
+regressionRSME2partC = sqrt(mean((residualsRegression2C)^2))
+
+# print the two next to eachother
+print(c(regressionModel1RSMEpartB,regressionRSME1partC))
+print(c(regressionModel2RSMEpartB, regressionRSME2partC))
+```
+The plots show everything looking proper and successful in regards to the models created.  
+The RMSE for model 1 from part B to C shows that it slightly increases, and for model 2, the RMSE also slightly increases from part B to C.  The 2 models 1 and 2 though do carry very close numbers for part B and C. 
+
+Model 1: B= 1.22 / C= 1.30
+Model 2: B= 1.23 / C= 1.31
+
+d).
+```{r}
+# repeat c). 500x and find their RMSE values for each model
+RSMEregression1 = c()
+RSMEregression2 = c()
+
+# begin loop for 500x
+for(n in 1:500) {
+  
+  # set seed to n increments 
+  set.seed(n)
+  
+  # index for the rest of the data
+  index = sample(seq_len(nrow(restData)), size = 500)
+  testData5d = restData[index,]
+  
+  yHatRegC = predict(regressionModel1, newdata = testData5d)
+  yHatReg2C = predict(regressionModel2, newdata = testData5d)
+  
+  residualRegression = yHatRegC - testData5d$y
+  residualRegression2 = yHatReg2C - testData5d$y
+  
+  regressionRSMEC = sqrt(mean((residualRegression)^2))
+  regressionRSME2C = sqrt(mean((residualRegression2)^2))
+  
+  RSMEregression1 = c(RSMEregression1, regressionRSMEC)
+  RSMEregression2 = c(RSMEregression2, regressionRSME2C)
+}
+
+# in each plot, add a vertical line with corresponding RMSE value found in b)
+hist(RSMEregression1)
+abline(v = regressionModel1RSMEpartB, col="red")
+
+hist(RSMEregression2)
+abline(v = regressionModel2RSMEpartB, col="red")
+```
+This cross-validation method can detect the model misspecification as the histogram is normally distributed, which follows the trends like in the 4 graphs in part b). 
+
